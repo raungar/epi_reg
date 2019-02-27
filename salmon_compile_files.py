@@ -1,52 +1,36 @@
 #!/bin/python
 
-from Bio import SeqIO
 import os
 import stat
-import gzip
 import urllib.request
-#import filter_metadata
-import tarfile
-import zipfile
 
-def do_kallisto(s,l):
-
-	current_dir=os.getcwd()
-	os.chdir(str(current_dir+"/output"))
-	print(str("\n"+"Building index in: "+os.getcwd()))
-	#os.system("kallisto index -i transcripts.idx Homo_sapiens.GRCh38.cdna.all.fa.gz")
-	print(str("\n"+"Beginning kallisto quantification in: "+os.getcwd()+"\n"))
-	os.system(str("kallisto quant -i hs.grch39_robs.index.gz -o quant_output -b 100 --single rna/ENCFF163DLM.fastq.gz -s "+str(s)+"-l "+l))
-	#os.system(str("kallisto quant -i transcripts.idx -o quant_output -b 100 --single rna/ENCFF163DLM.fastq.gz -s "+str(s)+"-l "+l))
-	print("kallisto finished")
-	os.chdir(str(current_dir))
 
 def do_salmon(paired,R1,R2):
-
-	if not os.path.exists("output/hs.grch39.index"):
+	#build index if it does not exist
+	if not os.path.exists("output/hs.grch38.index"):
+		#download grch38 if file does not exist
+		if not os.path.exists("output/Homo_sapiens.GRCh38.cdna.all.fa.gz"): 
+			print("Downloading transcriptome fasta")
+			os.system("wget -P output ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz")
+			print("Download complete")
+		#build salmon index
 		print("building salmon index")
-		os.system("salmon index -t output/Homo_sapiens.GRCh38.cdna.all.fa.gz -i output/hs.grch39.index")
+		os.system("salmon index -t output/Homo_sapiens.GRCh38.cdna.all.fa.gz -i output/hs.grch38.index")
+		print("salmon index built")
+
+	#create quants directory for salmon quantification if it odes not exist
 	if not os.path.exists("output/quants"):
 		os.mkdir("output/quants")
+
+	#perform salmon quantification on single end or paired end data
 	print("salmon quanitification")
 	if(paired=="False"):
 		print("single end salmon")
-		os.system(str("salmon quant -i output/hs.grch39.index -l A -r output/rna/"+R1+".fastq.gz -p 8 -o output/quants/"+R1))
+		os.system(str("salmon quant -i output/hs.grch39.index -l A -r output/rna/"+R1+".fastq.gz -p 8 -o output/quants/salmon_"+R1))
 	else:
-		os.system(str("salmon quant -i output/hs.grch39.index -l A -1 output/rna/"+R1+".fastq.gz -2 output/rna/"+R2+".fastq.gz -p 8 -o output/quants/"+R1+"_"+R2))
+		print("paired end salmon")
+		os.system(str("salmon quant -i output/hs.grch39.index -l A -1 output/rna/"+R1+".fastq.gz -2 output/rna/"+R2+".fastq.gz -p 8 -o output/quants/salmon_"+R1+"_"+R2))
 
-
-def get_single_end_params():
-	#get file
-	if not os.path.exists("output/prinseq.tar.gz"):
-		url="https://sourceforge.net/projects/prinseq/files/standalone/prinseq-lite-0.20.4.tar.gz"
-		urllib.request.urlretrieve(url,"output/prinseq.tar.gz")
-		#	archive = zipfile.ZipFile("output/prinseq.tar.gz", 'r')
-		#	imgfile = archive.open('img_01.png')
-		t = tarfile.open('output/prinseq.tar.gz', 'r')
-		for member in t.getmembers():
-			if "prinseq-lite.pl" in member.name:
-				t.extract(member, "output")
 
 #make bins for chip peak analysis
 def make_bins(chr,start_init, end_init):
@@ -60,8 +44,13 @@ def make_bins(chr,start_init, end_init):
 
 #get peak score
 def get_peaks(chr,start_init, end_init,chip_file_id):
+	#region is 50,000kb +/- of start and stop
 	start=str(start_init-50000)
 	end=str(end_init+50000)
+
+	#if the directory does not exist, create it
+	if not os.path.exists("output/chip_peaks"):
+		os.mkdir("output/chip_peaks")
 	
 	#get peaks at intersection with bin file
 	os.system(str("bedtools intersect -wao -a  output/bin_file_"+chr+"_"+start+"_"+end+".bed -b output/rna/"+chip_file_id+".bed.gz > output/chip_peaks/"+chip_file_id+".bed"))
@@ -71,28 +60,16 @@ def get_peaks(chr,start_init, end_init,chip_file_id):
 	os.remove(str("output/chip_peaks/sorted_"+chip_file_id+".bed"))
 	os.remove(str("output/chip_peaks/"+chip_file_id+".bed"))
 
-def main():
-	#file_metadata.main()
-#	print("HI")
-#	with gzip.open("output/rna/ENCFF000JYB.fastq.gz","rt") as file:
-#		for record in SeqIO.parse(file, "fastq"):
-#		        print(record.id)
-#
 
-#	get_single_end_params()
-	if not os.path.exists("output/Homo_sapiens.GRCh38.cdna.all.fa.gz"): 
-		print("Downloading transcripto fasta")
-		#os.system("wget -P output ftp://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz")
-		os.system("wget -P output ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz")
 
-		print("Download complete")
-	if not os.path.exists("output/chip_peaks"):
-		os.mkdir("output/chip_peaks")
-
+def hg19_to_GRCh38(file):
 	if not os.path.exists("output/hg19ToHg38.over.chain.gz"):
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz", "output/hg19ToHg38.over.chain.gz")
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver","output/liftOver")
-		os.chmod("output/liftOver",777) #give permissions
+		os.chmod("output/liftOver",777) #give permissions to operate on
+
+
+def main():
 
 	#s=Estimated average fragment length
 	#l=Estimated average fragment length
@@ -101,12 +78,15 @@ def main():
 	s=200
 	l=10
 	#do_kallisto(s,l)
-	paired="False"
+	paired="True"
 	#do_salmon(paired, "ENCFF163DLM", -1)
-	do_salmon(paired, "ENCFF001RMC,-1)
+	#do_salmon(paired, "ENCFF001RMC,-1)
 
+	#for paired end, will need to only take the ones with a 1.
+	#if can't find paired file, output an error message!
+	do_salmon(paired,"ENCFF091UZU","ENCFF163DLM")
 
-
+	#hg19_to_GRCh38(file)
 
 	chr="chr6"
 	start=108559823
