@@ -3,7 +3,12 @@
 import os
 import stat
 import urllib.request
+#from pybiomart import Dataset
+from biomart import BiomartServer
+import biomartpy as bm
+import pandas as pd
 
+print("HI??")
 
 def do_salmon(paired,R1,R2):
 	#build index if it does not exist
@@ -26,10 +31,10 @@ def do_salmon(paired,R1,R2):
 	print("salmon quanitification")
 	if(paired=="False"):
 		print("single end salmon")
-		os.system(str("salmon quant -i output/hs.grch39.index -l A -r output/rna/"+R1+".fastq.gz -p 8 -o output/quants/salmon_"+R1))
+		os.system(str("salmon quant -i output/hs.grch38.index -l A -r output/rna/"+R1+".fastq.gz -p 8 -o output/quants/salmon_"+R1))
 	else:
 		print("paired end salmon")
-		os.system(str("salmon quant -i output/hs.grch39.index -l A -1 output/rna/"+R1+".fastq.gz -2 output/rna/"+R2+".fastq.gz -p 8 -o output/quants/salmon_"+R1+"_"+R2))
+		os.system(str("salmon quant -i output/hs.grch38.index -l A -1 output/rna/"+R1+".fastq.gz -2 output/rna/"+R2+".fastq.gz -p 8 -o output/quants/salmon_"+R1+"_"+R2))
 
 
 #make bins for chip peak analysis
@@ -67,9 +72,41 @@ def hg19_to_GRCh38(file):
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz", "output/hg19ToHg38.over.chain.gz")
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver","output/liftOver")
 		os.chmod("output/liftOver",777) #give permissions to operate on
+	os.system(str("output/liftOver output/rna/"+file+".bed.gz output/hg19ToHg38.over.chain.gz output/rna/lifted_"+file+".bed.gz unMapped"))
 
+
+#get transcript ids for ensembl gene name
+def ensg_to_enst(gene_id):
+	mart_name = "ensembl"
+	dataset = "hsapiens_gene_ensembl"
+	attributes=["ensembl_transcript_id"]
+	filters={"ensembl_gene_id":[gene_id]}
+	print(str("looking for "+gene_id+"..."))
+	df = bm.make_lookup(mart_name=mart_name, dataset=dataset, attributes=attributes, filters=filters)
+	return(list(df.index))
+
+def get_rna_quant(enst_id):
+	#get number of max matches so once all ids are found they can stop running through them
+	my_file="output/quants/salmon_ENCFF091UZU_ENCFF163DLM/quant.sf"
+	with open(my_file, "r") as quant_file:
+		for quant_line in quant_file:
+			if any(id in quant_line for id in enst_id):
+				enst_id.remove(id) #remove to save time
+				print(quant_line.strip())
+				if(len(enst_id)==0):
+					print("ZERO")
+					break				
+def combine_files(start,stop):
+	rpkm=100*tpm/(stop-start)
+	
 
 def main():
+	#os.system("conda activate salmon")
+
+	#os.system("source ~/bisque/bqenv/bin/activate")
+
+	enst_id=ensg_to_enst("ENSG00000118689")
+	print(enst_id)
 
 	#s=Estimated average fragment length
 	#l=Estimated average fragment length
@@ -84,9 +121,9 @@ def main():
 
 	#for paired end, will need to only take the ones with a 1.
 	#if can't find paired file, output an error message!
-	do_salmon(paired,"ENCFF091UZU","ENCFF163DLM")
-
-	#hg19_to_GRCh38(file)
+	#do_salmon(paired,"ENCFF091UZU","ENCFF163DLM")
+	#do_salmon(paired,"ENCFF000HBA", "ENCFF000HBI")
+	#hg19_to_GRCh38("ENCFF327LZT")
 
 	chr="chr6"
 	start=108559823
