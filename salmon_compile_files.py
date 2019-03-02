@@ -3,12 +3,9 @@
 import os
 import stat
 import urllib.request
-#from pybiomart import Dataset
 from biomart import BiomartServer
 import biomartpy as bm
 import pandas as pd
-
-print("HI??")
 
 def do_salmon(paired,R1,R2):
 	#build index if it does not exist
@@ -75,26 +72,37 @@ def hg19_to_GRCh38(file):
 	os.system(str("output/liftOver output/rna/"+file+".bed.gz output/hg19ToHg38.over.chain.gz output/rna/lifted_"+file+".bed.gz unMapped"))
 
 
-#get transcript ids for ensembl gene name
+#gets transcript ids and location for ensembl gene name
+#and returns this information as a dictionary (keys=enst_id,vals=information list)
 def ensg_to_enst(gene_id):
+	#define biomart parameters
 	mart_name = "ensembl"
 	dataset = "hsapiens_gene_ensembl"
-	attributes=["ensembl_transcript_id"]
+	attributes=["ensembl_transcript_id","chromosome_name","start_position","end_position"]
 	filters={"ensembl_gene_id":[gene_id]}
-	print(str("looking for "+gene_id+"..."))
-	df = bm.make_lookup(mart_name=mart_name, dataset=dataset, attributes=attributes, filters=filters)
-	return(list(df.index))
+	#using biomartpy, obtain pandas df of requested information
+	biomart_df = bm.make_lookup(mart_name=mart_name, dataset=dataset, attributes=attributes, filters=filters)
+	#transform this data frame to a dictionary where the row names (enst_id) are the keys
+	#and the values are the rest of the requested information as a list
+	enst_dic=biomart_df.to_dict("index")
+	return(enst_dic)
 
 def get_rna_quant(enst_id):
 	#get number of max matches so once all ids are found they can stop running through them
 	my_file="output/quants/salmon_ENCFF091UZU_ENCFF163DLM/quant.sf"
 	with open(my_file, "r") as quant_file:
 		for quant_line in quant_file:
-			if any(id in quant_line for id in enst_id):
-				enst_id.remove(id) #remove to save time
+			found=-1
+			for this_id in enst_id:
+				if(this_id) in quant_line:
+					found=this_id
+			#if any(this_id in quant_line for this_id in enst_id):
+			if(found !=-1 ):
+				print(found)
+				enst_id.remove(found) #remove to save time
 				print(quant_line.strip())
+				#if all enst_id are found, stop searching
 				if(len(enst_id)==0):
-					print("ZERO")
 					break				
 def combine_files(start,stop):
 	rpkm=100*tpm/(stop-start)
@@ -105,9 +113,11 @@ def main():
 
 	#os.system("source ~/bisque/bqenv/bin/activate")
 
-	enst_id=ensg_to_enst("ENSG00000118689")
-	print(enst_id)
+	enst_id_dic=ensg_to_enst("ENSG00000118689")
 
+	print(list(enst_id_dic))
+
+	get_rna_quant(list(enst_id_dic))
 	#s=Estimated average fragment length
 	#l=Estimated average fragment length
 	#these are kallisto parameters, required for single end.
