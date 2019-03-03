@@ -3,9 +3,14 @@
 import os
 import stat
 import urllib.request
+#from pybiomart import Dataset
 from biomart import BiomartServer
 import biomartpy as bm
 import pandas as pd
+from pyliftover import LiftOver
+import gzip
+
+print("HI??")
 
 def do_salmon(paired,R1,R2):
 	#build index if it does not exist
@@ -64,13 +69,36 @@ def get_peaks(chr,start_init, end_init,chip_file_id):
 
 
 
-def hg19_to_GRCh38(file):
+def hg19_to_GRCh38(id):
 	if not os.path.exists("output/hg19ToHg38.over.chain.gz"):
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz", "output/hg19ToHg38.over.chain.gz")
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver","output/liftOver")
 		os.chmod("output/liftOver",777) #give permissions to operate on
-	os.system(str("output/liftOver output/rna/"+file+".bed.gz output/hg19ToHg38.over.chain.gz output/rna/lifted_"+file+".bed.gz unMapped"))
+	#os.system(str("output/liftOver output/rna/"+file+".bed.gz output/hg19ToHg38.over.chain.gz output/rna/lifted_"+file+".bed.gz unMapped"))
+	print("converting hg19 to grch38")
+	read_file=str("output/rna/"+id+".bed.gz")
+	write_file=str("output/rna/GRCh38_"+id+".bed.gz")
+	lo=LiftOver("output/hg19ToHg38.over.chain.gz")
 
+
+	with gzip.open(read_file,"rt") as bed_file:
+		with gzip.open(write_file,"wt") as write_bed:
+			for bedline in bed_file:
+				this_bedline=str(bedline).strip().split("\t")
+				#grab converted coordinates
+				coord1=lo.convert_coordinate(str(this_bedline[0]),int(this_bedline[1]))
+				coord2=lo.convert_coordinate(str(this_bedline[0]),int(this_bedline[2]))
+				#if not found, just don't print
+				if not coord1:
+					continue
+				if not coord2:
+					continue
+				#replace coordinates are write to new file
+				output_line=("\t".join([str(coord1[0][0]),str(coord1[0][1]),str(coord2[0][1]),this_bedline[3],
+						this_bedline[4],this_bedline[5],this_bedline[6],this_bedline[7],
+						this_bedline[8],this_bedline[9]]))
+				write_bed.write(output_line+"\n")
+	print("Done: "+write_file)
 
 #gets transcript ids and location for ensembl gene name
 #and returns this information as a dictionary (keys=enst_id,vals=information list)
@@ -113,11 +141,14 @@ def main():
 
 	#os.system("source ~/bisque/bqenv/bin/activate")
 
-	enst_id_dic=ensg_to_enst("ENSG00000118689")
+	###enst_id_dic=ensg_to_enst("ENSG00000118689")
 
-	print(list(enst_id_dic))
+	###print(list(enst_id_dic))
 
-	get_rna_quant(list(enst_id_dic))
+	###get_rna_quant(list(enst_id_dic))
+
+
+
 	#s=Estimated average fragment length
 	#l=Estimated average fragment length
 	#these are kallisto parameters, required for single end.
@@ -133,7 +164,7 @@ def main():
 	#if can't find paired file, output an error message!
 	#do_salmon(paired,"ENCFF091UZU","ENCFF163DLM")
 	#do_salmon(paired,"ENCFF000HBA", "ENCFF000HBI")
-	#hg19_to_GRCh38("ENCFF327LZT")
+	hg19_to_GRCh38("ENCFF327LZT")
 
 	chr="chr6"
 	start=108559823
