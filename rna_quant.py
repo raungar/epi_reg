@@ -54,23 +54,25 @@ def ensg_to_enst(gene_id):
 
 
 #NEED A BETTER WAY OF GETTING THIS INFORMATION
-def get_rna_quant(enst_id_file,rna_file):
+def get_rna_quant(enst_id_file,rna_file,outfile):
 	#get number of max matches so once all ids are found they can stop running through them
 	my_file=str("output/quants/"+rna_file+"/quant.sf")
-	with open(my_file, "r") as quant_file:
-		for quant_line in quant_file:
-			found=-1
-			for this_id in enst_id:
-				if(this_id) in quant_line:
-					found=this_id
-			#if any(this_id in quant_line for this_id in enst_id):
-			if(found !=-1 ):
-				print(found)
-				enst_id.remove(found) #remove to save time
-				print(quant_line.strip())
-				#if all enst_id are found, stop searching
-				if(len(enst_id)==0):
-					break				
+
+	with open(outfile,"w") as rna)output:
+		with open(my_file, "r") as quant_file:
+			for quant_line in quant_file:
+				found=-1
+				for this_id in enst_id:
+					if(this_id) in quant_line:
+						found=this_id
+				#if any(this_id in quant_line for this_id in enst_id):
+				if(found !=-1 ):
+					rna_output.write(found)
+					enst_id.remove(found) #remove to save time
+					rna_output.write(quant_line.strip())
+					#if all enst_id are found, stop searching
+					if(len(enst_id)==0):
+						break				
 #def rna_main(ensg_id):
 #rna_main("ENSG00000118689")
 
@@ -82,5 +84,6 @@ R2=sys.argv[4]
 
 rna_file(R1,R2)
 enst_id_dic=ensg_to_enst(ensg_id)
-get_rna_quant(list(enst_id_dic),rna_file)
+get_rna_quant(list(enst_id_dic),rna_file,outfile)
+
 
