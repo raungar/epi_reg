@@ -7,5 +7,8 @@ filter_metadata.py will create output directory with two subdirectories for the 
 
 ### Step 2: Quantification and Binning
 ##### salmon_compile_files.py
-salmon_compile_files.py will perform quantification using salmon and find chip-seq peaks using bedtools. Any hg19 data will be converted to GRCh38. This file can work process single or paired end data.
+###### run_epireg.sh, rna_quant.py, chip_peaks.py
+salmon_compile_files.py will perform quantification using salmon and find chip-seq peaks using bedtools. Any hg19 data will be converted to GRCh38. This file can work process single or paired end data. This is accomplished by distinguishing between rna/chip files and separately calling them as jobs (to speed up process) by calling run_epireg.sh. This calls either rna_quant.py or chip_peaks.py depending on the data to complete analysis.
+
+
 
