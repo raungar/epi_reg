@@ -1,6 +1,7 @@
 #!/bin/python
 
 import os
+import sys
 import stat
 import urllib.request
 #from pybiomart import Dataset
@@ -141,12 +142,45 @@ def main():
 
 	#os.system("source ~/bisque/bqenv/bin/activate")
 
-	###enst_id_dic=ensg_to_enst("ENSG00000118689")
+	md_file=sys.argv[1]
+	with open(md_file) as metadata:
+		for md_line in metadata:
+			md_line_split=md_line.split("\t")
+			id=md_line_split[1]
+			assay=md_line_split[4]
+			cell_type=md_line_split[6]
+			histone_mark=md_line_split[12].split("-")[0]
+			paired_end=md_line_split[29]			
 
-	###print(list(enst_id_dic))
+			print("\t".join([id,assay,cell_type,histone_mark,paired_end]))
 
-	###get_rna_quant(list(enst_id_dic))
+	#OUTLINE: 
+	#cell type dic
+	#for line in metadata.tsv
+	#get cell type
+		#if file dont exist, plz create, name is just cell type
+			#add cell type to dic, val is one
+		#else, dic_num++ (counts # of replicates)
+	#is rna
+		#enst_id_dic=ensg_to_enst("ENSG00000118689")
+		###get_rna_quant(list(enst_id_dic))
 
+	#is chip
+		#is hg19? hg19togrch38 that
+		#is paired?
+		#salmon
+	#matchy matchy
+		#below are col names k
+		#bin deets (chr a:1,2) and quants from file
+			#for each line, check if rna quants in there
+				#if not, add zero for rna
+				#if so, (FIGURE OUT WHEN MULTIPLE WHAT TO DO) print htat val
+				#print dic val
+				#print histone mark
+				#print cell type
+				
+				#(WELLL RLLY>>>>> put in a line then print out the whole line u know)
+		
 
 
 	#s=Estimated average fragment length
