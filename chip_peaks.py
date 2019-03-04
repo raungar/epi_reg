@@ -22,7 +22,7 @@ def make_bins(chr,start_init, end_init):
 
 
 #get peak score
-def get_peaks(chr,start_init, end_init,chip_file_id):
+def get_peaks(chr,start_init, end_init,chip_file_id,outfile):
 	#region is 50,000kb +/- of start and stop
 	start=str(start_init-50000)
 	end=str(end_init+50000)
@@ -36,7 +36,7 @@ def get_peaks(chr,start_init, end_init,chip_file_id):
 	os.system(str("bedtools intersect -wao -a  output/bin_file_"+chr+"_"+start+"_"+end+".bed -b output/rna/"+chip_file_id+".bed.gz > output/chip_peaks/"+chip_file_id+".bed"))
 	#sort for merge step
 	os.system(str("sort -k1,1 -k2,2n output/chip_peaks/"+chip_file_id+".bed > output/chip_peaks/sorted_"+chip_file_id+".bed"))
-	os.system(str("bedtools merge -i output/chip_peaks/sorted_"+chip_file_id+".bed -c 14 -o max > output/chip_peaks/merged_"+chip_file_id+".bed"))
+	os.system(str("bedtools merge -i output/chip_peaks/sorted_"+chip_file_id+".bed -c 14 -o max > output/chip_peaks/"+outfile+".bed"))
 	os.remove(str("output/chip_peaks/sorted_"+chip_file_id+".bed"))
 	os.remove(str("output/chip_peaks/"+chip_file_id+".bed"))
 
@@ -92,6 +92,6 @@ if(assemble=="hg19"):
 #	end=108684774
 #	#bed_file="ENCFF998UVS" #ENCFF327LZT
 	#bed_file="ENCFF327LZT"
-get_peaks(chr, int(start),int(end),bed_id)
+get_peaks(chr, int(start),int(end),bed_id,outfile)
 
 #main()
