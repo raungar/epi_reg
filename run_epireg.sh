@@ -9,18 +9,12 @@
 #SBATCH --nodes=1
 #SBATCH --mem=40Gb
 
-echo "THIS IS $1"
-
 if [[ "$1" == *"ChIP-seq"* ]]
 then
-	#$1 $2 $3 $4 $5 $6 $7
-	#OUTFILE, bed_id, chr, start, end, assemble
-	echo "CHIP"
+	chip_peaks.py $1 $2 $3 $4 $5 $6
 fi
 
 if [[ "$1" == *"RNA-seq"* ]]
 then
-	#$1 $2 $3 $4 $5 $6 $7
-	#outfile, ensg_id, R1, R2
-	echo "RNA"
+	python rna_quant.py $1 $2 $3 $4 
 fi
