@@ -25,7 +25,7 @@ def get_files(url):
 		file_name=str("output/"+type+"/"+url.split("/")[-1])
 		#only download new files
 		if not os.path.isfile(file_name):
-			#urllib.request.urlretrieve(url,file_name)
+			urllib.request.urlretrieve(url,file_name)
 			log_file.write("Download complete: "+str(file_name)+"\n")
 		return 1
 	except Exception as e:
@@ -79,6 +79,18 @@ def read_metadata(file_metadata):
 		with open(file_metadata) as md_file:
 			for line in md_file:
 				line_split=line.split("\t")
+				
+				#if audit errors, noncompliance, or action required skip
+				if(line_split[43] != "" or line_split[44] != ""):
+					continue
+				if(re.search("[a-zA-Z]",line_split[45])):
+					continue
+
+				#remove archived
+				if(line_split[40] == "archived"):
+					continue
+
+				#get type
 				if (line_split[4] == "ChIP-seq"):
 					#if line passes chip-seq filters add to dic
 					if(check_chip(line)==1):
@@ -97,7 +109,9 @@ def read_metadata(file_metadata):
 def dics_same_cell_lines(chip_dic,rna_dic):
 	uniq_chip_cell_lines=set([col[6] for col in list(chip_dic.values())])
 	uniq_rna_cell_lines=set([col[6] for col in list(rna_dic.values())])
+	#print([col[6] for col in list(rna_dic.values())])
 	same_cell_lines=uniq_chip_cell_lines.intersection(uniq_rna_cell_lines)
+	print(same_cell_lines)
 	chip_dic_final={}
 	rna_dic_final={}
 	for chip_key, chip_val in chip_dic.items():
@@ -109,10 +123,10 @@ def dics_same_cell_lines(chip_dic,rna_dic):
 	return(chip_dic_final,rna_dic_final)
 
 
-def main():
+def make_paths_files():
+
 	log_file.write("LOGFILE OUTPUT"+"\n")
-	file_metadata="output/metadata.tsv"
-	
+
 	if not os.path.exists("output"):
 	    os.mkdir("output")
 	if not os.path.exists("output/chip"):
@@ -127,6 +141,13 @@ def main():
 			time.sleep(0.2)	
 			sys.stdout.write('.')
 		log_file.write(" ---- Download complete"+"\n")
+
+
+
+def main():
+	file_metadata="output/metadata.tsv"
+	
+	make_paths_files()
 				
 	chip_dic_all,rna_dic_all=read_metadata(file_metadata)
 	chip_dic_reduced, rna_dic_reduced = dics_same_cell_lines(chip_dic_all,rna_dic_all)
