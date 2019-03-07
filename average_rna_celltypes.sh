@@ -53,3 +53,21 @@ do
 		
 
 done
+
+mkdir -p "output/quants/enst/"
+
+for f in `ls output/quants/averaged/*`
+do
+	cell_type=`echo $f | awk -F"/" '{print $4}' | awk -F"." '{print $1}'`
+	while read line
+	do
+		enst=`echo $line | awk '{print $1}'`
+		tpm=`echo $line | awk '{print $2}'`
+		#echo -e $cell_type"\t"$enst"\t"$tpm
+		echo -e "$cell_type\t$tpm" >> "output/quants/enst/$enst.txt"
+		 
+	done<$f
+done
+
+
+
