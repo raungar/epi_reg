@@ -1,17 +1,12 @@
 #!/bin/python
 
-#import pandas as pd
 import sys
 import os
 import wget
 import re
 import multiprocessing as mp
-import socket
-import requests
-import time
 import urllib.request
 from multiprocessing.dummy import Pool
-#from urllib.request import urlretrieve
 
 
 
@@ -22,7 +17,8 @@ def get_files(url):
 			type="chip"
 		else:
 			type="rna"
-		file_name=str("output/"+type+"/"+url.split("/")[-1])
+		#print(url)
+		file_name=str(type+"/"+url.split("/")[-1])
 		#only download new files
 		if not os.path.isfile(file_name):
 			urllib.request.urlretrieve(url,file_name)
@@ -34,7 +30,7 @@ def get_files(url):
 
 #downlaod files in parallel
 def download(dic,type):
-	url_list=[item[36] for item in dic.values()]
+	url_list=[item[42] for item in dic.values()]
 	pool = mp.Pool(processes=8)
 	res = pool.map(get_files, url_list)
 	log_file.write(str("Download complete: "+type+"\n"))
@@ -45,12 +41,13 @@ def check_chip(line):
 	passes=0 #set default to return 0 for not passing
 	line_split=line.split("\t")
 
+
 	#check if it is a bed narrowPeak file
 	if(line_split[1] == "bed narrowPeak"):
 		#check if the output type is "peaks"
 		if(line_split[2]=="peaks"):
 			#if matches h3k4me1, h3k4me3, h3k9me9, h3k27ac, k3k36me3 then it passes
-			if(re.match("H3K(([27]{2}|[36]{2}|4|9)me3|4me1|27ac)",line_split[12])):
+			if(re.match("H3K(([27]{2}|[36]{2}|4|9)me3|4me1|27ac)",line_split[18])):
 				passes=1
 	return(passes)
 
@@ -67,7 +64,7 @@ def check_rna(line):
 			#check if biosample treatment is null
 			if not (line_split[9]):
 				#check if library depleted in rrna
-				if(line_split[14]=="rRNA"):
+				if(line_split[20]=="rRNA"):
 					passes=1
 	return(passes)
 	
@@ -79,15 +76,20 @@ def read_metadata(file_metadata):
 		with open(file_metadata) as md_file:
 			for line in md_file:
 				line_split=line.split("\t")
+			
 				
+				#if(line_split[50] != "" or line_split[51] != ""):
+				#	continue
+
 				#if audit errors, noncompliance, or action required skip
-				if(line_split[43] != "" or line_split[44] != ""):
+				if(line_split[51] != ""):
 					continue
-				if(re.search("[a-zA-Z]",line_split[45])):
+
+				if(re.search("[a-zA-Z]",line_split[52])):
 					continue
 
 				#remove archived
-				if(line_split[40] == "archived"):
+				if(line_split[47] == "archived"):
 					continue
 
 				#get type
@@ -109,9 +111,8 @@ def read_metadata(file_metadata):
 def dics_same_cell_lines(chip_dic,rna_dic):
 	uniq_chip_cell_lines=set([col[6] for col in list(chip_dic.values())])
 	uniq_rna_cell_lines=set([col[6] for col in list(rna_dic.values())])
-	#print([col[6] for col in list(rna_dic.values())])
+	#print([col[7] for col in list(rna_dic.values())])
 	same_cell_lines=uniq_chip_cell_lines.intersection(uniq_rna_cell_lines)
-	print(same_cell_lines)
 	chip_dic_final={}
 	rna_dic_final={}
 	for chip_key, chip_val in chip_dic.items():
@@ -126,18 +127,15 @@ def dics_same_cell_lines(chip_dic,rna_dic):
 def make_paths_files():
 
 	log_file.write("LOGFILE OUTPUT"+"\n")
-
-	if not os.path.exists("output"):
-	    os.mkdir("output")
-	if not os.path.exists("output/chip"):
-            os.mkdir("output/chip")
-	if not os.path.exists("output/rna"):
-            os.mkdir("output/rna")
-	if not os.path.exists("output/metadata.tsv"):
+	if not os.path.exists("chip"):
+            os.mkdir("chip")
+	if not os.path.exists("rna"):
+            os.mkdir("rna")
+	if not os.path.exists("metadata.tsv"):
 		log_file.write("Downloading metadata.tsv..." +"\n")
 		metadata_url=str("\"https://www.encodeproject.org/metadata/type=Experiment&status=released&replicates.library.biosample.donor.organism.scientific_name=Homo+sapiens/metadata.tsv\"")
-		os.system(str("wget "+metadata_url+" -P output/")) #only downloads headers otherwise??
-		while not os.path.exists("output/metadata.tsv"):
+		os.system(str("wget "+metadata_url)) #only downloads headers otherwise??
+		while not os.path.exists("metadata.tsv"):
 			time.sleep(0.2)	
 			sys.stdout.write('.')
 		log_file.write(" ---- Download complete"+"\n")
@@ -145,19 +143,21 @@ def make_paths_files():
 
 
 def main():
-	file_metadata="output/metadata.tsv"
 	
 	make_paths_files()
+	file_metadata="metadata.tsv"
+
 				
 	chip_dic_all,rna_dic_all=read_metadata(file_metadata)
 	chip_dic_reduced, rna_dic_reduced = dics_same_cell_lines(chip_dic_all,rna_dic_all)
-	
+
+
 	download(chip_dic_reduced,"chip")
 	download(rna_dic_reduced,"rna")
 	
-	reduced_metadata=open("output/reduced_metadata.tsv",'w')
+	reduced_metadata=open("reduced_metadata.tsv",'w')
 	#print header
-	with open('output/metadata.tsv') as md_file:
+	with open('metadata.tsv') as md_file:
 		header = md_file.readline()
 		reduced_metadata.write(header)
 	for reduced_vals_chip in chip_dic_reduced.values():
@@ -167,7 +167,7 @@ def main():
 	reduced_metadata.close()
 
 
-log_file=open("output/log.txt",'w')
+log_file=open("log.txt",'w')
 main()
 log_file.close()
 
