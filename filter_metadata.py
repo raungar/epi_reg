@@ -7,8 +7,7 @@ import re
 import multiprocessing as mp
 import urllib.request
 from multiprocessing.dummy import Pool
-
-
+import subprocess
 
 #to download files in parallel
 def get_files(url):
@@ -21,8 +20,10 @@ def get_files(url):
 		file_name=str(type+"/"+url.split("/")[-1])
 		#only download new files
 		if not os.path.isfile(file_name):
-			urllib.request.urlretrieve(url,file_name)
+			#urllib.request.urlretrieve(url,file_name)
+			os.system(str("sbatch scripts/submit_url.sh "+url+" "+file_name))
 			log_file.write("Download complete: "+str(file_name)+"\n")
+
 		return 1
 	except Exception as e:
 		log_file.write("Download failed: " + str(url) + "\n")
@@ -170,4 +171,3 @@ def main():
 log_file=open("log.txt",'w')
 main()
 log_file.close()
-
