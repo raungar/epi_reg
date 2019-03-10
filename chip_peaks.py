@@ -25,7 +25,7 @@ def get_peaks(chr,start_init, end_init,chip_file_id,outfile,outfolder):
 		os.mkdir(str(outfolder+"/chip_peaks"))
 	
 	#get peaks at intersection with bin file
-	os.system(str("bedtools intersect -wao -a  "+outfolder+"/bin_file_"+chr+"_"+start+"_"+end+".bed -b "+outfolder+"/chip/"+chip_file_id+".bed.gz > "+outfolder+"/chip_peaks/intersect_"+chip_file_id+".bed"))
+	os.system(str("bedtools intersect -wao -a  "+outfolder+"/bin_file_"+chr+"_"+start+"_"+end+".bed -b chip/"+chip_file_id+".bed.gz > "+outfolder+"/chip_peaks/intersect_"+chip_file_id+".bed"))
 	#sort for merge step
 	os.system(str("sort -k1,1 -k2,2n "+outfolder+"/chip_peaks/intersect_"+chip_file_id+".bed > "+outfolder+"/chip_peaks/sorted_"+chip_file_id+".bed"))
 	#perform merge and output into final file
