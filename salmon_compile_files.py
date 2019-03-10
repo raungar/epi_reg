@@ -146,18 +146,4 @@ def main():
 
 
 
-	#wait until everything has finished
-	while((len(os.listdir(str(outfolder+"/chip_peaks")))+len(glob.glob(str(outfolder+"/quants/RNA*"))))<line_count):
-		print(".",end='')
-		time.sleep(5)
-
-#	while((len(os.listdir("rna"))+len(os.listdir("rna"))<line_count):
-#		time.sleep(5)
-
-	os.system(str("./scripts/make_chip_matrix.sh "+outfolder))
-	os.system(str("./scripts/average_rna_celltypes.sh "+outfolder))
-	os.system(str("Rscript scripts/correlation.R "+outfolder))
-
-
-
 main()
