@@ -4,86 +4,115 @@ import os
 import sys
 import stat
 import urllib.request
-#from pybiomart import Dataset
 from biomart import BiomartServer
 import biomartpy as bm
 import pandas as pd
 from pyliftover import LiftOver
 import gzip
+import time
+import argparse
+import glob
 
-
-def make_bins(chr,start_init, end_init):
+def make_bins(chr,start_init, end_init,outfolder):
 	start=str(start_init-50000)
 	end=str(end_init+50000)
 	
-	os.system(str("echo "+chr)+"\t"+start+"\t"+end+str(" | sed 's/\s/\t/g' > output/chr_file_"+chr+"_"+start+"_"+end+".txt"))
-	os.system(str("bedtools makewindows -b output/chr_file_"+chr+"_"+start+"_"+end+'''.txt -w 500 | awk '{fix=$2+1; print $1"\t"fix"\t"$3e}' > output/bin_file_'''+chr+"_"+start+"_"+end+".bed"))
-	os.remove("output/chr_file_"+chr+"_"+start+"_"+end+".txt")
+	os.system(str("echo "+chr)+"\t"+start+"\t"+end+str(" | sed 's/\s/\t/g' > "+outfolder+"/chr_file_"+chr+"_"+start+"_"+end+".txt"))
+	os.system(str("bedtools makewindows -b "+outfolder+"/chr_file_"+chr+"_"+start+"_"+end+'''.txt -w 500 | awk '{fix=$2+1; print $1"\t"fix"\t"$3e}' > ''' +outfolder+"/bin_file_"+chr+"_"+start+"_"+end+".bed"))
+	os.remove(outfolder+"/chr_file_"+chr+"_"+start+"_"+end+".txt")
 
 
-def make_folders():
-	if not os.path.exists("output"):
-		os.mkdir("output")
+def make_folders(outfolder):
+	if not os.path.exists(outfolder):
+		os.mkdir(outfolder)
+	if not os.path.exists("jobs_output"):
+		os.mkdir("jobs_output")
 
-	if not os.path.exists("output/chip_peaks"):
-		os.mkdir("output/chip_peaks")
+	if not os.path.exists(str(outfolder+"/chip_peaks")):
+		os.mkdir(str(outfolder+"/chip_peaks"))
+	#create quants directory for salmon quantification if it odes not exist
+	if not os.path.exists(str(outfolder+"/quants")):
+		os.mkdir(str(outfolder+"/quants"))
 
 
-	if not os.path.exists("output/hg19ToHg38.over.chain.gz"):
-		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz", "output/hg19ToHg38.over.chain.gz")
-		#urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver","output/liftOver")
-		os.chmod("output/liftOver",777) #give permissions to operate on
+	if not os.path.exists("/hg19ToHg38.over.chain.gz"):
+		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz", "hg19ToHg38.over.chain.gz")
+		#urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver","liftOver")
+		#os.chmod("liftOver",0o777) #give permissions to operate on
 
 
 	#MAYBE MOVE THE PATH AND FILE CHECKING TO MAIN GIRL OK 
 	#(COULD MAYBE BE MESSED UP WHEN PARALLEL IMPLEMENTED)
 	#build index if it does not exist
-	if not os.path.exists("output/hs.grch38.index"):
+	if not os.path.exists("hs.grch38.index"):
 		#download grch38 if file does not exist
-		if not os.path.exists("output/Homo_sapiens.GRCh38.cdna.all.fa.gz"): 
+		if not os.path.exists("Homo_sapiens.GRCh38.cdna.all.fa.gz"): 
 			print("Downloading transcriptome fasta")
-			os.system("wget -P output ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz")
+			os.system("wget ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz")
 			print("Download complete")
 		#build salmon index
 		print("building salmon index")
-		os.system("salmon index -t output/Homo_sapiens.GRCh38.cdna.all.fa.gz -i output/hs.grch38.index")
+		os.system("salmon index -t Homo_sapiens.GRCh38.cdna.all.fa.gz -i hs.grch38.index")
 		print("salmon index built")
 
-	#create quants directory for salmon quantification if it odes not exist
-	if not os.path.exists("output/quants"):
-		os.mkdir("output/quants")
 
 
+def get_args():
+	parser = argparse.ArgumentParser(prog='EPI_REG', usage='%(prog)s [options]')
+	parser.add_argument("--metadata",type=str,help="metadata file to run on",nargs=1,required=True)
+	parser.add_argument("--chr",type=str,help="chr name formatted like chr1",nargs=1,required=True)
+	parser.add_argument("--start",type=int,help="start location",nargs=1,required=True)
+	parser.add_argument("--end",type=int,help="end location",nargs=1,required=True)
+	parser.add_argument("--gene",type=str,help="ENSG gene name",nargs=1,required=True)
+	parser.add_argument("--outfolder",type=str,help="output folder",nargs=1,required=True)
+	args=parser.parse_args()
+
+	return(args)
 
 
 def main():
-	print("HELLLO PLZ. PLZ :| ")
-	cell_type_dic={}
 
-	chr="chr6"
-	start=108559823
-	end=108684774
-	gene="ENSG00000118689"
+	args=get_args()
 
-	make_folders()
-	make_bins(chr,int(start),int(end))
+	md_file=str(args.metadata[0])
+	chr=str(args.chr[0])
+	start=int(args.start[0])
+	end=int(args.end[0])
+	gene=str(args.gene[0])
+	outfolder=str(args.outfolder[0])
 
-	md_file=sys.argv[1]
+	if not outfolder.isalnum():
+		print("ERROR: OUTFOLDER MUST CONTAIN ONLY CHARACTERS OR NUMBERS")
+		sys.exit()
+
+	make_folders(outfolder)
+	make_bins(chr,int(start),int(end),outfolder)
+
+
+	cell_type_dic={}	
+	line_count=-1 #start at -1 to account for header
 	with open(md_file) as metadata:
 		for md_line in metadata:
+			line_count+=1
 			md_line_split=md_line.split("\t")
 			id=md_line_split[0]
 			assay=md_line_split[4]
 			cell_type=md_line_split[6]
-			histone_mark=md_line_split[12].split("-")[0]
-			paired_end=md_line_split[29]			
-			pair2=md_line_split[30]
-			assembly=md_line_split[37]
-			
-			if(cell_type in cell_type_dic.keys()):
-				cell_type_dic[cell_type]+=1
+			histone_mark=md_line_split[18].split("-")[0]
+			paired_end=md_line_split[35]			
+			pair2=md_line_split[36]
+			assembly=md_line_split[43]
+
+			print("HISTONE MARK: "+histone_mark + " , assembly: "+assembly)
+			print("assay: "+assay+" , celltype: "+cell_type)
+			print("paired_end: "+paired_end+", pair2: "+pair2)
+			print("assembly: "+assembly)
+
+
+			if((cell_type, histone_mark) in cell_type_dic.keys()):
+				cell_type_dic[(cell_type,histone_mark)]+=1
 			else:
-				cell_type_dic[cell_type]=1
+				cell_type_dic[(cell_type,histone_mark)]=1
 
 
 			if not(paired_end):
@@ -98,63 +127,37 @@ def main():
 
 			rename_cell_type=cell_type.replace(" ", "-")
 			rename_cell_type=rename_cell_type.replace("'","")
-			print("THIS IS MY ASSAY: "+assay)
+
 			if(assay=="ChIP-seq"):
 				#OUTFILE, bed_id, chr, start, end, assemble
-				outfile_name=str(assay+"_"+id+"_"+rename_cell_type+"_"+histone_mark+"_"+str(cell_type_dic[cell_type]))
-				os.system("sbatch ./scripts/run_epireg.sh "+outfile_name+" "+id+" "+chr+" "+str(start)+" "+str(end)+" "+assembly)
+				outfile_name=str(outfolder+"/chip_peaks/"+assay+"_"+id+"_"+rename_cell_type+"_"+histone_mark+"_"+str(cell_type_dic[(cell_type,histone_mark)]))
+				os.system("sbatch ./scripts/run_epireg.sh "+outfile_name+" "+id+" "+chr+" "+str(start)+" "+str(end)+" "+assembly+" "+outfolder)
 				#os.system("sh scripts/run_epireg.sh "+id+" "+assay+" "+cell_type+" "+str(cell_type_dic[cell_type])+" "+histone_mark+" "+assembly)
 				#run chip
 
 			if(assay=="RNA-seq"):
-				outfile_name=str(assay+"_"+id+"_"+rename_cell_type+"_"+str(cell_type_dic[cell_type]))
+				outfile_name=str(outfolder+"/quants/"+assay+"_"+id+"_"+rename_cell_type+"_"+str(cell_type_dic[(cell_type,histone_mark)]))
 				##outfile, ensg_id, R1, R2
-				os.system("sbatch ./scripts/run_epireg.sh "+outfile_name+" "+gene+" "+R1+" "+str(R2))
+				os.system("sbatch ./scripts/run_epireg.sh "+outfile_name+" "+gene+" "+R1+" "+str(R2)+" "+outfolder)
 				#os.system("sh scripts/run_epireg.sh "+id+" "+assay+" "+cell_type+" "+str(cell_type_dic[cell_type])+" "+R1+" "+str(R2))
 				#os.system("sh scripts/run_epireg.sh "+id+" "+assay+" "+cell_type+" "+str(cell_type_dic[cell_type])+" "+R1+" "+str(R2))
 				#get rna
 				#os.system(sh scripts/run_epireg.sh id assay cell_type cell_type_dic[cell_type] R1 R2)
 
 
-	#	print(cell_type_dic)
-			#print("\t".join([id,assay,cell_type,histone_mark,paired_end]))
 
-	#OUTLINE: 
-	#cell type dic
-	#for line in metadata.tsv
-	#get cell type
-		#if file dont exist, plz create, name is just cell type
-			#add cell type to dic, val is one
-		#else, dic_num++ (counts # of replicates)
-	#is rna
-		#enst_id_dic=ensg_to_enst("ENSG00000118689")
-		###get_rna_quant(list(enst_id_dic))
+	#wait until everything has finished
+	while((len(os.listdir(str(outfolder+"/chip_peaks")))+len(glob.glob(str(outfolder+"/quants/RNA*"))))<line_count):
+		print(".",end='')
+		time.sleep(5)
 
-	#is chip
-		#is hg19? hg19togrch38 that
-		#is paired?
-		#salmon
-	#matchy matchy
-		#below are col names k
-		#bin deets (chr a:1,2) and quants from file
-			#for each line, check if rna quants in there
-				#if not, add zero for rna
-				#if so, (FIGURE OUT WHEN MULTIPLE WHAT TO DO) print htat val
-				#print dic val
-				#print histone mark
-				#print cell type
-				
-				#(WELLL RLLY>>>>> put in a line then print out the whole line u know)
-		
-	#for paired end, will need to only take the ones with a 1.
-	#if can't find paired file, output an error message!
-	#do_salmon(paired,"ENCFF091UZU","ENCFF163DLM")
-	#do_salmon(paired,"ENCFF000HBA", "ENCFF000HBI")
-#	hg19_to_GRCh38("ENCFF327LZT")
+#	while((len(os.listdir("rna"))+len(os.listdir("rna"))<line_count):
+#		time.sleep(5)
 
-	#bed_file="ENCFF998UVS" #ENCFF327LZT
-#	bed_file="ENCFF327LZT"
-#	make_bins(chr,int(start), int(end)) #do before loop, should only need ot be done once
-#	get_peaks(chr, int(start),int(end),bed_file)
+	os.system(str("./scripts/make_chip_matrix.sh "+outfolder))
+	os.system(str("./scripts/average_rna_celltypes.sh "+outfolder))
+	os.system(str("Rscript scripts/correlation.R "+outfolder))
+
+
 
 main()

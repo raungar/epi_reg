@@ -1,17 +1,20 @@
 #!/bin/bash
 
-mkdir -p "output/quants/averaged/"
+outfolder=$1
 
-cell_types_list=`ls output/quants/RNA* | awk -F"_" '{print $3}' | sort | uniq`
+mkdir -p "$outfolder/quants/averaged/"
+
+cell_types_list=`ls $outfolder/quants/RNA* | awk -F"_" '{print $3}' | sort | uniq`
 
 for cell_type in $cell_types_list
 do
-	files=`ls output/quants/*$cell_type*`
-	num_replicates=`ls output/quants/*$cell_type* | wc -l`
+	files=`ls $outfolder/quants/*$cell_type*`
+	num_replicates=`ls $outfolder/quants/*$cell_type* | wc -l`
 	if [[ $num_replicates == 1 ]]
 	then
 		file_name=`echo $files | awk -F"/" '{print $NF}'`
-		cp $files output/quants/averaged/RNA_$cell_type.txt
+		#echo -e "ENST_ID\tSUM" > "$outfolder/quants/averaged/$cell_type.txt"
+		cat $files | awk '{print $1"\t"$4}' >>  $outfolder/quants/averaged/$cell_type.txt
 	else
 		declare -A transcripts
 
@@ -37,13 +40,13 @@ do
 			done<$file
 		done
 		
-		echo -e "ENST_ID\tSUM"> "output/quants/averaged/RNA_$cell_type.txt"
 
+		#echo -e "ENST_ID\tSUM" > "$outfolder/quants/averaged/$cell_type.txt"
 		for this_enst in "${!transcripts[@]}"
 		do
 			tpm_sum=${transcripts["$this_enst"]}
 			tpm_ave=`echo "NA" | awk -v tpm_sum=$tpm_sum -v denom=$num_replicates '{ave=tpm_sum/denom; print ave}'`
-			echo -e "$this_enst\t$tpm_ave" >> "output/quants/averaged/RNA_$cell_type.txt"
+			echo -e "$this_enst\t$tpm_ave" >> "$outfolder/quants/averaged/$cell_type.txt"
 		done
 
 
@@ -54,9 +57,9 @@ do
 
 done
 
-mkdir -p "output/quants/enst/"
+mkdir -p "$outfolder/quants/enst/"
 
-for f in `ls output/quants/averaged/*`
+for f in `ls $outfolder/quants/averaged/*`
 do
 	cell_type=`echo $f | awk -F"/" '{print $4}' | awk -F"." '{print $1}'`
 	while read line
@@ -64,10 +67,11 @@ do
 		enst=`echo $line | awk '{print $1}'`
 		tpm=`echo $line | awk '{print $2}'`
 		#echo -e $cell_type"\t"$enst"\t"$tpm
-		echo -e "$cell_type\t$tpm" >> "output/quants/enst/$enst.txt"
+		echo -e "$cell_type\t$tpm" >> "$outfolder/quants/enst/$enst.txt"
 		 
 	done<$f
 done
+
 
 
 
