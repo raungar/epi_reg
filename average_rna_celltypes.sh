@@ -8,18 +8,24 @@ cell_types_list=`ls $outfolder/quants/RNA* | awk -F"_" '{print $3}' | sort | uni
 
 for cell_type in $cell_types_list
 do
-	files=`ls $outfolder/quants/*$cell_type*`
-	num_replicates=`ls $outfolder/quants/*$cell_type* | wc -l`
+	file_found=`ls $outfolder/quants/ |  grep -v "salmon" | grep $cell_type`
+	num_replicates=`ls $outfolder/quants/ |  grep -v "salmon" | grep $cell_type | wc -l`
+	files=$file_found
+
+
 	if [[ $num_replicates == 1 ]]
 	then
 		file_name=`echo $files | awk -F"/" '{print $NF}'`
 		#echo -e "ENST_ID\tSUM" > "$outfolder/quants/averaged/$cell_type.txt"
-		cat $files | awk '{print $1"\t"$4}' >>  $outfolder/quants/averaged/$cell_type.txt
+		cat "$outfolder/quants/$files" | awk '{print $1"\t"$4}' >>  $outfolder/quants/averaged/$cell_type.txt
 	else
 		declare -A transcripts
 
-		for file in $files
+		for this_file in $files
 		do
+			#echo "$file"
+			this_file="$outfolder/quants/$this_file"
+			#echo $this_file
 			while read line
 			do
 
@@ -37,7 +43,7 @@ do
 
 				fi		
 
-			done<$file
+			done<"$this_file"
 		done
 		
 
