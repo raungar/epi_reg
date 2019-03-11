@@ -30,6 +30,7 @@ def get_peaks(chr,start_init, end_init,chip_file_id,outfile,outfolder):
 	os.system(str("sort -k1,1 -k2,2n "+outfolder+"/chip_peaks/intersect_"+chip_file_id+".bed > "+outfolder+"/chip_peaks/sorted_"+chip_file_id+".bed"))
 	#perform merge and output into final file
 	os.system(str("bedtools merge -i "+outfolder+"/chip_peaks/sorted_"+chip_file_id+".bed -c 14 -o max > "+outfile+".bed"))
+	print(str("MERGED: "+outfile+".bed"))
 	#remove the temporary files
 	os.remove(str(outfolder+"/chip_peaks/sorted_"+chip_file_id+".bed"))
 	os.remove(str(outfolder+"/chip_peaks/intersect_"+chip_file_id+".bed"))
@@ -43,7 +44,7 @@ def convert_hg19(id):
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz", "output/hg19ToHg38.over.chain.gz")
 		urllib.request.urlretrieve("http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver","output/liftOver")
 		os.chmod("output/liftOver",777) #give permissions to operate on
-	#os.system(str("output/liftOver output/chip/"+file+".bed.gz output/hg19ToHg38.over.chain.gz output/chip/lifted_"+file+".bed.gz unMapped"))
+	#os.system(str("output/liftOver chip/"+file+".bed.gz output/hg19ToHg38.over.chain.gz output/chip/lifted_"+file+".bed.gz unMapped"))
 	print("converting hg19 to grch38")
 	read_file=str("output/chip/"+id+".bed.gz")
 	write_file=str("output/chip/GRCh38_"+id+".bed.gz")

@@ -10,17 +10,17 @@ def do_salmon(R1,R2,outfolder):
 	#create quants directory for salmon quantification if it odes not exist
 	if not os.path.exists(str(outfolder+"/quants")):
 		os.mkdir(str(outfolder+"/quants"))
+	print(str("R1: "+R1+" , R2: "+R2))
 
 	#perform salmon quantification on single end or paired end data
-	print("salmon quanitification")
-	if(int(R2)==-1):
+	if(str(R2)==str("-1")):
 		print("single end salmon")
 		file_name=str("salmon_"+R1)
-		os.system(str("salmon quant -i hs.grch38.index -l A -r "+outfolder+"/rna/"+R1+".fastq.gz -p 8 -o "+outfolder+"/quants/salmon_"+R1))
+		os.system(str("salmon quant -i hs.grch38.index -l A -r rna/"+R1+".fastq.gz -p 8 -o "+outfolder+"/quants/salmon_"+R1))
 	else:
 		file_name=str("salmon_"+R1+"_"+R2)
 		print("paired end salmon")
-		os.system(str("salmon quant -i hs.grch38.index -l A -1 "+outfolder+"/rna/"+R1+".fastq.gz -2 "+outfolder+"/rna/"+R2+".fastq.gz -p 8 -o "+outfolder+"/quants/salmon_"+R1+"_"+R2))
+		os.system(str("salmon quant -i hs.grch38.index -l A -1 rna/"+R1+".fastq.gz -2 rna/"+R2+".fastq.gz -p 8 -o "+outfolder+"/quants/salmon_"+R1+"_"+R2))
 	return(file_name)
 
 #gets transcript ids and location for ensembl gene name
@@ -70,11 +70,10 @@ R1=sys.argv[3]
 R2=sys.argv[4]
 outfolder=sys.argv[5]
 
-
-print("OUTFLIE: "+outfile)
-
 rna_file=do_salmon(R1,R2,outfolder)
 enst_id_dic=ensg_to_enst(ensg_id)
+print("ENST ID: ")
+print(list(enst_id_dic))
 get_rna_quant(list(enst_id_dic),rna_file,outfolder,outfile)
-
+print("PRINTED TO: "+outfolder+"/"+outfile)
 

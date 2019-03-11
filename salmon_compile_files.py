@@ -103,10 +103,8 @@ def main():
 			pair2=md_line_split[36]
 			assembly=md_line_split[43]
 
-			print("HISTONE MARK: "+histone_mark + " , assembly: "+assembly)
-			print("assay: "+assay+" , celltype: "+cell_type)
-			print("paired_end: "+paired_end+", pair2: "+pair2)
-			print("assembly: "+assembly)
+			#print("HISTONE MARK: "+histone_mark + " , assembly: "+assembly+" , celltype: "+cell_type)
+			#print("paired_end: "+paired_end+", pair2: "+pair2, "assay: "+assay)
 
 
 			if((cell_type, histone_mark) in cell_type_dic.keys()):
@@ -119,11 +117,13 @@ def main():
 				R1=id
 				R2=-1
 			else:
-				if(paired_end==1):
+				if(str(paired_end)=="1"):
 					R1=id
 					R2=pair2
 				else:
 					continue
+
+
 
 			rename_cell_type=cell_type.replace(" ", "-")
 			rename_cell_type=rename_cell_type.replace("'","")
@@ -144,6 +144,23 @@ def main():
 				#get rna
 				#os.system(sh scripts/run_epireg.sh id assay cell_type cell_type_dic[cell_type] R1 R2)
 
+
+
+	#wait until everything has finished
+#	while((len(os.listdir(str(outfolder+"/chip_peaks")))+len(glob.glob(str(outfolder+"/quants/RNA*"))))<line_count):
+#		print(".",end='')
+#		time.sleep(5)
+
+#	while((len(os.listdir("rna"))+len(os.listdir("rna"))<line_count):
+#		time.sleep(5)
+
+	new_script=open("scripts/do_analysis.sh","w")
+	
+
+	make_mx=str("./scripts/make_chip_matrix.sh "+outfolder+ " "+chr+" "+str(start)+" "+str(end))
+	ave_rna=str("./scripts/average_rna_celltypes.sh "+outfolder)
+	correlate=str("Rscript scripts/correlation.R "+outfolder)
+	new_script.write("#!/bin/bash"+"\n"+make_mx+"\n"+ave_rna+"\n"+correlate+"\n")
 
 
 main()

@@ -1,9 +1,19 @@
 #!/bin/bash
 
 outfolder=$1
+chr=$2
+start=$(($3-50000))
+stop=$(($4+50000))
+bed_file=$outfolder"/bin_file_"$chr"_"$start"_"$stop".bed"
+
+awk '{print $1"_"$2"_"$3}' "$bed_file"
 
 #make dir if does not exist
 mkdir -p "$outfolder/matrix"
+
+echo "YO"
+echo $bed_file
+echo "YOOO"
 
 
 #declare associative arrays
@@ -12,7 +22,7 @@ declare -A col_headers
 
 
 #loop through output files to combine the ones that have the same mark
-for f in `ls $outfolder/chip_peaks/ChIP*`
+for f in `ls $outfolder"/chip_peaks/ChIP"*`
 do 
 
 	mark=`echo $f | awk -F"_" '{print $5}'`
@@ -35,11 +45,12 @@ do
 	#if it's the first time a mark has been found
 	if [[ $j -eq 1 ]]
 	then
+
 		#define col_header to be mark and cell line
 		col_header=`echo "$f" | awk -F"_" '{print $4}'`
 		#paste together the bed file such that the chrA loc1 loc2 --> chrA_loc1_loc2 is the first column
 		#with the peak value from the mark file
-		paste <(awk '{print $1"_"$2"_"$3}' $outfolder/bin_file_chr6_108509823_108734774.bed) <(awk '{print $4}' $f) > "$outfolder/matrix/temp_"$mark"_"$j".txt"
+		paste <(awk '{print $1"_"$2"_"$3}' $bed_file ) <(awk '{print $4}' $f) > "$outfolder/matrix/temp_"$mark"_"$j".txt"
 		#add to the col headers
 		col_headers["$mark"]="location\t"$col_header
 	else
