@@ -1,16 +1,16 @@
 #!/bin/bash
 
-#SBATCH --job-name="epireg_"$1
-#SBATCH --output="jobs_output/epireg_$1.%j.out"
-#SBATCH --error="jobs_output/epireg_$1.%j.err"
-#SBATCH --time=30:00
+#SBATCH --job-name="rerun-rna"
+#SBATCH --output="jobs_output/rerun_rna.%j%.out"
+#SBATCH --error="jobs_output/rerun_rna.%j%.err"
+#SBATCH --time=1:15:00
 #SBATCH --qos=normal
-#SBATCH -p horence
+#SBATCH -p owners
 #SBATCH --nodes=1
-#SBATCH --mem=10Gb
+#SBATCH --mem=40Gb
 
- echo $PATH
 
+echo $1
 
 #export PATH=$PATH:~/local/numexpr/2.0.1/bin
 #export PYTHONPATH=$PYTHONPATH:~/miniconda3/lib/python3.6/site-packages
@@ -24,6 +24,6 @@ fi
 
 if [[ "$1" == *"RNA-seq"* ]]
 then
-	python scripts/rna_quant.py $1 $2 $3 $4 $5
+	python scripts/rna_quant.py $1 $2 $3 $4 $5 $6
 fi
 

@@ -5,22 +5,21 @@ import sys
 import urllib
 import biomartpy as bm
 
-
-def do_salmon(R1,R2,outfolder):
+#run salmon quantification
+def do_salmon(R1,R2):
 	#create quants directory for salmon quantification if it odes not exist
-	if not os.path.exists(str(outfolder+"/quants")):
-		os.mkdir(str(outfolder+"/quants"))
-	print(str("R1: "+R1+" , R2: "+R2))
+	if not os.path.exists("salmon"):
+		os.mkdir("salmon")
 
 	#perform salmon quantification on single end or paired end data
 	if(str(R2)==str("-1")):
 		print("single end salmon")
 		file_name=str("salmon_"+R1)
-		os.system(str("salmon quant -i hs.grch38.index -l A -r rna/"+R1+".fastq.gz -p 8 -o "+outfolder+"/quants/salmon_"+R1))
+		os.system(str("salmon quant -i hs.grch38.index -l A -r rna/"+R1+".fastq.gz -p 8 -o salmon/salmon_"+R1))
 	else:
 		file_name=str("salmon_"+R1+"_"+R2)
 		print("paired end salmon")
-		os.system(str("salmon quant -i hs.grch38.index -l A -1 rna/"+R1+".fastq.gz -2 rna/"+R2+".fastq.gz -p 8 -o "+outfolder+"/quants/salmon_"+R1+"_"+R2))
+		os.system(str("salmon quant -i hs.grch38.index -l A -1 rna/"+R1+".fastq.gz -2 rna/"+R2+".fastq.gz -p 8 -o salmon/salmon_"+R1+"_"+R2))
 	return(file_name)
 
 #gets transcript ids and location for ensembl gene name
@@ -39,19 +38,31 @@ def ensg_to_enst(gene_id):
 	return(enst_dic)
 
 
-#NEED A BETTER WAY OF GETTING THIS INFORMATION
+#for the salmon quantification, find the enst transcripts and print them to a 
+#file with a more descriptive name (outfile) for future analysis
 def get_rna_quant(enst_id,rna_file,outfolder,outfile):
-	#get number of max matches so once all ids are found they can stop running through them
-	my_file=str(outfolder+"/quants/"+rna_file+"/quant.sf")
+	if not os.path.exists(str(outfolder+"/quants")):
+		os.mkdir(str(outfolder+"/quants"))
 
+	print(outfile)
+	#salmon file to look through
+	#my_file=str("salmon/"+rna_file+"/quant.sf")
+
+	#open rna_output as file to write to
 	with open(outfile,"w") as rna_output:
-		with open(my_file, "r") as quant_file:
+		#open rna output file
+		with open(rna_file, "r") as quant_file:
 			for quant_line in quant_file:
-				found=-1
+				found=-1 #keeps track of whether the enst gene was found
+				#if this line contains the ENST that is for this gene,
+				#record this id in found
 				for this_id in enst_id:
 					if(this_id) in quant_line:
 						found=this_id
 				#if any(this_id in quant_line for this_id in enst_id):
+
+				#if this id has been found, remove it from the list and
+				#write this to output
 				if(found !=-1 ):
 					print(quant_line)
 					#rna_output.write(found)
@@ -60,6 +71,9 @@ def get_rna_quant(enst_id,rna_file,outfolder,outfile):
 					#if all enst_id are found, stop searching
 					if(len(enst_id)==0):
 						break				
+	#return how many enst ids were not found
+	return(len(enst_id))
+
 #def rna_main(ensg_id):
 #rna_main("ENSG00000118689")
 
@@ -69,11 +83,43 @@ ensg_id=sys.argv[2]
 R1=sys.argv[3]
 R2=sys.argv[4]
 outfolder=sys.argv[5]
+enst=sys.argv[6]
 
-rna_file=do_salmon(R1,R2,outfolder)
+
+if(str(R2)==str("-1")):
+	potential_file_name=str("salmon_"+R1)
+else:
+	potential_file_name=str("salmon_"+R1+"_"+R2)
+is_file=str("salmon/"+potential_file_name+"/quant.sf")
+if not os.path.exists(is_file):
+	rna_file=do_salmon(R1,R2)
+else:
+	rna_file=is_file
+
+
+#get ensts via biomart
 enst_id_dic=ensg_to_enst(ensg_id)
-print("ENST ID: ")
-print(list(enst_id_dic))
-get_rna_quant(list(enst_id_dic),rna_file,outfolder,outfile)
-print("PRINTED TO: "+outfolder+"/"+outfile)
+enst_ids=list(enst_id_dic)
+#if optional enst supplied, add to the list
+if not(enst == "-1"):
+	enst_ids.append(enst)
+
+
+#get the enst quantifications and output as a new more informative file (outfolder/outfile)
+num_not_found=get_rna_quant(enst_ids,rna_file,outfolder,outfile)
+#if none of the enst were found, then print the error
+if(num_not_found==len(list(enst_id_dic))):
+	print("TRANSCRIPTS NOT FOUND --")
+	print(list(enst_id_dic))
+
+
+
+
+#if(enst_provided == "False"):
+#else:
+#	enst_ids="ENST00000370532"
+#print("ENST ID: ")
+#print(list(enst_id_dic))
+
+
 

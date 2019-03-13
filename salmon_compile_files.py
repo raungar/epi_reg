@@ -45,16 +45,17 @@ def make_folders(outfolder, custom_index):
 
 
 	#build index if it does not exist
-	if not os.path.exists("hs.grch38.index") and custom_index=-"-1":
-		#download grch38 if file does not exist
-		if not os.path.exists("Homo_sapiens.GRCh38.cdna.all.fa.gz"): 
-			print("Downloading transcriptome fasta")
-			os.system("wget ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz")
-			print("Download complete")
-		#build salmon index
-		print("building salmon index")
-		os.system("salmon index -t Homo_sapiens.GRCh38.cdna.all.fa.gz -i hs.grch38.index")
-		print("salmon index built")
+	if (custom_index=="-1"):
+		if not os.path.exists("hs.grch38.index"):
+			#download grch38 if file does not exist
+			if not os.path.exists("Homo_sapiens.GRCh38.cdna.all.fa.gz"): 
+				print("Downloading transcriptome fasta")
+				os.system("wget ftp://ftp.ensembl.org/pub/release-95/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz")
+				print("Download complete")
+			#build salmon index
+			print("building salmon index")
+			os.system("salmon index -t Homo_sapiens.GRCh38.cdna.all.fa.gz -i hs.grch38.index")
+			print("salmon index built")
 	else:
 		os.system("salmon index -t " +custom_index+ " -i hs.grch38.index")
 
@@ -68,6 +69,7 @@ def get_args():
 	parser.add_argument("--gene",type=str,help="ENSG gene name",nargs=1,required=True)
 	parser.add_argument("--outfolder",type=str,help="output folder",nargs=1,required=True)
 	parser.add_argument("--custom_index",type=str,help="full path to custom index",nargs=1,required=False)
+	parser.add_argument("--enst",type=str,help="ENST transcript name",nargs=1,required=False)
 
 	args=parser.parse_args()
 
@@ -87,10 +89,15 @@ def main():
 	gene=str(args.gene[0])
 	outfolder=str(args.outfolder[0])
 	#check if custom index exists
-	if not str(args.custom_index[0]):
+	if not args.custom_index:
 		custom_index="-1"
 	else:		
 		custom_index=str(args.custom_index[0])
+	if not args.enst:
+		enst="-1"
+	else:
+		enst=str(args.enst[0])
+
 
 
 	#do not allow outfolder name to not be alphanumeric
@@ -105,7 +112,6 @@ def main():
 	#make the bin file that will be used by bedtools for binning
 	#do here since only needs to be made once
 	make_bins(chr,int(start),int(end),outfolder)
-
 
 	cell_type_dic={} #count how many times this cell type has been seen (key=(cell_type,mark) and val=count)
 	line_count=-1 #start at -1 to account for header
@@ -163,7 +169,7 @@ def main():
 			if(assay=="RNA-seq"):
 				outfile_name=str(outfolder+"/quants/"+assay+"_"+id+"_"+rename_cell_type+"_"+str(cell_type_dic[(cell_type,histone_mark)]))
 				##outfile, ensg_id, R1, R2
-				os.system("sbatch ./scripts/run_epireg.sh "+outfile_name+" "+gene+" "+R1+" "+str(R2)+" "+outfolder)
+				os.system("sbatch ./scripts/run_epireg.sh "+outfile_name+" "+gene+" "+R1+" "+str(R2)+" "+outfolder + " " +enst)
 				#os.system("sh scripts/run_epireg.sh "+id+" "+assay+" "+cell_type+" "+str(cell_type_dic[cell_type])+" "+R1+" "+str(R2))
 				#os.system("sh scripts/run_epireg.sh "+id+" "+assay+" "+cell_type+" "+str(cell_type_dic[cell_type])+" "+R1+" "+str(R2))
 				#get rna
