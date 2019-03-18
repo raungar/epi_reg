@@ -4,10 +4,21 @@ import os
 import sys
 import stat
 import urllib.request
-from pyliftover import LiftOver
 import gzip
 import argparse
 import glob
+
+
+#this file performs several important tasks
+#1. downloads relevant files and creates relevant files/folders: 
+#	creates a window file for chip-seq binning
+#	makes output folders if they don't exist
+#	downloads hg19to38 converting chain.gz file
+#	loads custom index or downloads human one
+#	builds index for later use
+#2. reads reduced_metadata.tsv to send files to either chip-seq or 
+#   rna-seq analysis in a parallel manner by submitting a job per analysis
+#3. creates do_analysis.sh that automatically loads paramters for user
 
 #make a bin file for bedtools that start 50kb up and downstream of start and stop
 #with bin size of 500 bp. do here since only needs to be done once
@@ -15,7 +26,7 @@ def make_bins(chr,start_init, end_init,outfolder):
 	#50kb up and downstream
 	start=str(start_init-50000)
 	end=str(end_init+50000)
-	
+
 	#create naming
 	os.system(str("echo "+chr)+"\t"+start+"\t"+end+str(" | sed 's/\s/\t/g' > "+outfolder+"/chr_file_"+chr+"_"+start+"_"+end+".txt"))
 	#uses bedtools makewindows to create location windows
@@ -194,6 +205,7 @@ def main():
 	#col1=bin locations, col2=pearson, col3=spearman correlation
 	correlate=str("Rscript scripts/correlation.R "+outfolder)
 
+	#create a new script that automatically contains necessary parameters for the user to easily run
 	new_script.write("#!/bin/bash"+"\n"+make_mx+"\n"+ave_rna+"\n"+correlate+"\n")
 
 
