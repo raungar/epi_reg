@@ -1,30 +1,30 @@
 #!/bin/bash
 
+
+#this file takes information from the chip_peaks directory to make a informative summary matrix
+#in which each file is a different histone mark, the columns are the cell type, the rows are
+#the bin locations, and the values are the corresponding peaks. this is outputted in the 
+#directory outfolder/matrix
+
 outfolder=$1
 chr=$2
-start=$(($3-50000))
+start=$(($3-50000)) #start and stop is 50 +/- kb from gene region
 stop=$(($4+50000))
 bed_file=$outfolder"/bin_file_"$chr"_"$start"_"$stop".bed"
-
-awk '{print $1"_"$2"_"$3}' "$bed_file"
 
 #make dir if does not exist
 mkdir -p "$outfolder/matrix"
 
-echo "YO"
-echo $bed_file
-echo "YOOO"
-
 
 #declare associative arrays
-declare -A marks
-declare -A col_headers
+declare -A marks #keeps track of histone marks
+declare -A col_headers #keeps track of col headers
 
 
 #loop through output files to combine the ones that have the same mark
 for f in `ls $outfolder"/chip_peaks/ChIP"*`
 do 
-
+	#get the mark
 	mark=`echo $f | awk -F"_" '{print $5}'`
 
 	#if this is not the first instance of the mark add one to the number of times it's been found
@@ -38,6 +38,7 @@ do
 
 	
 	#j is the number of times this mark has been found (first time is 1)
+	#prev_j is one less than the number of times this mark has been found
 	j=${marks["$mark"]}
 	prev_j=$(($j-1))
 
@@ -57,7 +58,7 @@ do
 		#define col header
 		col_header=`echo "$f" | awk -F"_" '{print $4}'`
 		#if this mark has been found before, paste the column from this file to the previous file and save it in a new
-		#temp file 
+		#make a temp file since bash cannot rewrite in place
 		paste "$outfolder/matrix/temp_"$mark"_"$prev_j".txt" <(awk '{print $4}' $f) > "$outfolder/matrix/temp_"$mark"_"$j".txt" 
 		#add this column header to the array
 		col_headers["$mark"]=${col_headers["$mark"]}"\t"$col_header
@@ -66,7 +67,6 @@ do
 
 	fi
 done
-#head temp$j.txt
 
 
 #for each mark found add a header column and create a final output matrix
@@ -83,13 +83,5 @@ do
 	rm "$outfolder/matrix/temp_"$this_mark"_"$j".txt"
 
 done
-#echo $marks
 
-#uniq_marks=`printf '%s\n' $marks | awk -v RS='[[:space:]]+' '!a[$0]++{printf "%s%s", $0, RT}'`
 
-#for this_mark in $uniq_marks 
-#do
-#	echo $this_mark
-#	echo -e "$col_headers$this_mark\n$(cat $outfolder/matrix/temp_$this_mark_$j.txt)" > $outfolder/matrix/chip_matrix_$this_mark.txt
-#done
-#mv $outfolder/temp$j.txt $outfolder/matrix/chip_matrix.txt

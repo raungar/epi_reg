@@ -5,6 +5,11 @@ import sys
 import urllib
 import biomartpy as bm
 
+#this files performs salmon quantification if not already done for the input file
+#then gets the relevant ensg --> enst and adds on any optional enst provided
+#then gets the relevant transcripts from the quantification files and outputs them
+#in the folder outfolder/quants/
+
 #run salmon quantification
 def do_salmon(R1,R2):
 	#create quants directory for salmon quantification if it odes not exist
@@ -74,10 +79,10 @@ def get_rna_quant(enst_id,rna_file,outfolder,outfile):
 	#return how many enst ids were not found
 	return(len(enst_id))
 
-#def rna_main(ensg_id):
-#rna_main("ENSG00000118689")
 
 
+
+#########################################################################
 outfile=sys.argv[1]
 ensg_id=sys.argv[2]
 R1=sys.argv[3]
@@ -85,17 +90,20 @@ R2=sys.argv[4]
 outfolder=sys.argv[5]
 enst=sys.argv[6]
 
-
+#get correct file name for check if file quantification has been performed
 if(str(R2)==str("-1")):
 	potential_file_name=str("salmon_"+R1)
 else:
 	potential_file_name=str("salmon_"+R1+"_"+R2)
 is_file=str("salmon/"+potential_file_name+"/quant.sf")
+
+#check if salmon quantification has already been performed
+#if it has not, quantify
 if not os.path.exists(is_file):
 	rna_file=do_salmon(R1,R2)
 else:
 	rna_file=is_file
-
+	print("RNA FILE : "+rna_file)
 
 #get ensts via biomart
 enst_id_dic=ensg_to_enst(ensg_id)
@@ -107,19 +115,13 @@ if not(enst == "-1"):
 
 #get the enst quantifications and output as a new more informative file (outfolder/outfile)
 num_not_found=get_rna_quant(enst_ids,rna_file,outfolder,outfile)
+
 #if none of the enst were found, then print the error
 if(num_not_found==len(list(enst_id_dic))):
 	print("TRANSCRIPTS NOT FOUND --")
 	print(list(enst_id_dic))
 
 
-
-
-#if(enst_provided == "False"):
-#else:
-#	enst_ids="ENST00000370532"
-#print("ENST ID: ")
-#print(list(enst_id_dic))
 
 
 
