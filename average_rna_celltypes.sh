@@ -1,11 +1,5 @@
 #!/bin/bash
 
-
-#this script uses RNA quantifications to make summary files in two folders:
-#outfolder/averaged/ directory contains one file per cell type with col1=enst col2=quant val
-#outfolder/enst/ directory contains one file per enst with col1=cell type and col2=quant val
-
-
 outfolder=$1
 
 #if does not exist, create dir averaged
@@ -18,6 +12,8 @@ cell_types_list=`ls $outfolder/quants/RNA* | awk -F"_" '{print $3}' | sort | uni
 #one line per enst where col1 is the enst name and col2 is the averaged value
 for cell_type in $cell_types_list
 do
+	declare -A transcripts #make associative array of transcripts where key is enst and val is tpm value
+	
 	#get the list of files with this cell type
 	#and record the number of replicates
 	file_found=`ls $outfolder/quants/ |  grep -v "salmon" | grep $cell_type`
@@ -28,10 +24,11 @@ do
 	if [[ $num_replicates == 1 ]]
 	then
 		file_name=`echo $files | awk -F"/" '{print $NF}'`
+		#echo -e "ENST_ID\tSUM" > "$outfolder/quants/averaged/$cell_type.txt"
 		cat "$outfolder/quants/$files" | awk '{print $1"\t"$4}' >  $outfolder/quants/averaged/$cell_type.txt
 	#otherwise average the replicates
 	else
-		declare -A transcripts #make associative array of transcripts where key is enst and val is tpm value
+		for x in "${!transcripts[@]}"; do printf "[%s]=%s\n" "$x" "${transcripts[$x]}" ; done
 
 		#loop through all the replicate cell_type files
 		for this_file in $files
@@ -46,7 +43,6 @@ do
 				if test "${transcripts["$enst"]+isset}"
 				then
 					val=`echo "NA" | awk -v sum="${transcripts["$enst"]}" -v tpm=$tpm '{new_sum=sum+tpm; print new_sum}'`
-	
 					transcripts["$enst"]="$val"
 				#otherwise, just creat a new key/val pair
 				else
@@ -65,6 +61,7 @@ do
 			loop_i=`echo $loop_i + 1 | bc`
 			tpm_sum=${transcripts["$this_enst"]}
 			tpm_ave=`echo "NA" | awk -v tpm_sum=$tpm_sum -v denom=$num_replicates '{ave=tpm_sum/denom; print ave}'`
+
 			#overwrite if first time (allows for reruns)
 			if [ $loop_i -eq 1 ]
 			then
@@ -79,6 +76,7 @@ do
 
 	fi
 		
+	unset transcripts
 
 done
 
@@ -111,6 +109,3 @@ do
 		 
 	done<$f
 done
-
-
-
