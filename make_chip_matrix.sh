@@ -15,6 +15,8 @@ bed_file=$outfolder"/bin_file_"$chr"_"$start"_"$stop".bed"
 #make dir if does not exist
 mkdir -p "$outfolder/matrix"
 
+#delete empty files
+find $outfolder/chip_peaks -type f -empty -delete
 
 #declare associative arrays
 declare -A marks #keeps track of histone marks
