@@ -60,7 +60,7 @@ do
 		do
 			loop_i=`echo $loop_i + 1 | bc`
 			tpm_sum=${transcripts["$this_enst"]}
-			tpm_ave=`echo "NA" | awk -v tpm_sum=$tpm_sum -v denom=$num_replicates '{ave=tpm_sum/denom; print ave}'`
+			tpm_ave=`echo "NA" | awk -v tpm_sum="$tpm_sum" -v denom="$num_replicates" '{ave=tpm_sum/denom; print ave}'`
 
 			#overwrite if first time (allows for reruns)
 			if [ $loop_i -eq 1 ]
