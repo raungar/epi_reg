@@ -95,7 +95,6 @@ do
 	while read line
 	do
 		line_i=`echo $line_i + 1 | bc`
-		echo $line_i
 		enst=`echo $line | awk '{print $1}'` #get enst
 		tpm=`echo $line | awk '{print $2}'` #get tpm
 		#write the cell_type and tpm for each tpm
